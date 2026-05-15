@@ -4,12 +4,12 @@ Plugin for MultiShock that adds WebSocket Endpoints, Callable Shock Configs, Int
 
 ## WebSocket Endpoints
 - ws://localhost:4569/Events
--- Register Events
--- Activate Event
+  - Register Events
+  - Activate Event
 
 - ws://localhost:4569/Raw
--- Activate shock with Raw Data
--- TODO: Compatiblity with old MultiShock websocket
+  - Activate shock with Raw Data
+  - TODO: Compatiblity with old MultiShock websocket
 
 
 ## Nodes
