@@ -1,0 +1,171 @@
+﻿@namespace DynamicShock.Components.Event_Editor
+
+@using DynamicShock.Components.Config
+@using DynamicShock.Components.Transform_Editor
+@using DynamicShock.Models;
+
+@using Microsoft.Extensions.Logging
+@using System.Text
+@using MultiShock.PluginSdk.Components
+
+
+
+
+<div>
+    <style>
+        .size_override {
+            max-width: 150px;
+        }
+    </style>
+
+    <div class="row-div">
+                
+        <NumberInput Label="@(edit_value.Name())" Disabled="@((edit_value.Setup & Event_Value_Flags.Enabled) == 0)" Step="0.1" Value="edit_value.Static_Value" ValueChanged="@((v) => { if (v is double ve) {edit_value.Static_Value=ve;}})" />
+        <Button Text="@(Transform_Button_Text())" Class="align-button" Variant="@(Transform_Button_Disabled() ? "disabled" : "primary")" Disabled="@(Transform_Button_Disabled())" OnClick="@(() => Transform_Button_Click())" />
+        @if (edit_value.Dynamic_Value != null)
+        {
+            <Button Text="Remove Dynamic Value" Class="align-button" Variant="danger" OnClick="@(() => Transform_Remove_Click())" />
+        }
+        
+        @if ((edit_value.Setup & Event_Value_Flags.Output_String) == Event_Value_Flags.Output_String)
+        {
+            <TextInput Class="size_override"
+                       Disabled="@((edit_value.Setup & Event_Value_Flags.Enabled) == 0)"
+                       Label="Output String"
+                       @bind-Value="edit_value.String_Output" />
+        }
+
+
+
+        @if ((edit_value.Setup & Event_Value_Flags.Main_Value) == 0)
+        {
+            <Toggle Label="@($"Enable {edit_value.Name()}?")" Value="@((edit_value.Setup & Event_Value_Flags.Enabled) == Event_Value_Flags.Enabled)" ValueChanged="@((b) => Enable_Changed())" Class="align-Toggle"></Toggle>
+        }
+    </div>
+    @if (edit_value.Dynamic_Value != null)
+    {
+        <div style="display:@(open ? "block" : "none")">
+            <Edit_Transform transform_compare="edit_value.Dynamic_Value" size="7" direct="true" />
+        </div>
+    }
+</div>
+
+
+
+
+
+
+@code {
+    [Parameter, EditorRequired]
+    public Event_Value compare_value { get; set; }
+    Event_Value edit_value = new();
+
+    [Parameter]
+    public bool direct { get; set; } = false;
+
+    [Parameter, EditorRequired]
+    public Stored_Event parent { get; set; }
+
+    [Parameter, EditorRequired]
+    public Event_Value_Types value_type { get; set; }
+
+    [Parameter, EditorRequired] 
+    public Action rerender { get; set; }
+
+    bool open = false;
+
+
+    protected override void OnInitialized()
+    {
+        if (direct)
+        {
+            edit_value = compare_value;
+        }
+        else
+        {
+            edit_value = compare_value.Copy();
+        }
+
+
+        base.OnInitialized();
+    }
+
+    private bool X_Axis_UnSet()
+    {
+        if (parent.Label_X == null || parent.Label_X == "" || parent.Min_X == null || parent.Max_X == null || parent.X_Precision == null)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private bool Transform_Button_Disabled()
+    {
+        if (X_Axis_UnSet())
+        {
+            return true;
+        }
+        if ((edit_value.Setup & Event_Value_Flags.Main_Value) == Event_Value_Flags.Main_Value)
+        {
+            return false;
+        }
+        return ((edit_value.Setup & Event_Value_Flags.Enabled) != Event_Value_Flags.Enabled);
+    }
+
+    private string Transform_Button_Text()
+    {
+        if (X_Axis_UnSet())
+        {
+            return "Requires X-Axis Settings";
+        }
+        if (edit_value.Dynamic_Value == null)
+        {
+            return "Enable Dynamic " + edit_value.Name();
+        }
+        if (open)
+        {
+            return "Hide Dynamic " + edit_value.Name();
+        }
+        return "Show Dynamic " + edit_value.Name();
+    }
+
+    private void Enable_Changed()
+    {
+        edit_value.Setup = edit_value.Setup ^ Event_Value_Flags.Enabled;
+        if ((edit_value.Setup & Event_Value_Flags.Enabled) == 0)
+        {
+            open = false;
+        }
+    }
+
+    private void Transform_Button_Click()
+    {
+        if (edit_value.Dynamic_Value == null)
+        {
+            if (!(parent.Label_X == null || parent.Label_X == "" || parent.Min_X == null || parent.Max_X == null || parent.X_Precision == null))
+            {
+                edit_value.Dynamic_Value = new(value_type)
+                {
+                    Min_X = (double)parent.Min_X,
+                    Max_X = (double)parent.Max_X,
+                    Label_X = (string)parent.Label_X,
+                    X_Precision = (int)parent.X_Precision,
+                };
+                edit_value.Dynamic_Value.Keyframes = [new((((double)parent.Max_X - (double)parent.Min_X) / 2 + (double)parent.Min_X), edit_value.Static_Value, Interpolation.linear)];
+                open = true;
+                rerender.Invoke();
+            }
+        }
+        else
+        {
+            open = !open;
+        }
+    }
+
+    private void Transform_Remove_Click()
+    {
+        edit_value.Dynamic_Value = null; 
+        open = false;
+        rerender.Invoke();
+    }
+}

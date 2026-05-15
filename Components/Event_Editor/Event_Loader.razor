@@ -1,0 +1,167 @@
+﻿@page "/plugins/Aes-dynamicshock/LoadEvents"
+@namespace DynamicShock.Components.Event_Editor
+
+@using DynamicShock.Components.Selector_D
+@using DynamicShock.Models;
+
+@using Microsoft.Extensions.Logging
+@using System.Text
+@using System.Text.Json;
+@using MultiShock.PluginSdk.Components
+@using VectSharp
+@using VectSharp.Plots
+@using VectSharp.SVG
+
+<div>
+    <style>
+        .select-override {
+            min-width: 150px;
+            width: 150px;
+            max-width: 200px;
+        }
+
+        .row-div {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .load-options {
+            margin-left:4px;
+        }
+    </style>
+
+    <Card Title="Load Event">
+        <div class="row-div">
+            <div class="row-div">
+                <Event_SelectorD @bind-Value="event_holder" />
+                <Button Class="load-options" Variant="primary" OnClick="@(() => Create_New())">Create New</Button>
+                <Button Class="load-options" Disabled="@(event_holder == null)" Variant="primary" OnClick="@(() => Load_Event())">Load</Button>
+                <Button Class="load-options" Disabled="@(event_holder == null)" Variant="danger" OnClick="@(() => Remove_Event())">Delete</Button>
+            </div>
+        </div>
+    </Card>
+    @if (event_a != null)
+    {
+        <Event_Editor event_compare="event_a" />
+    }
+    @if (event_b != null)
+    {
+        <Event_Editor event_compare="event_b" />
+    }
+    <Card Title="Export Events">
+        <div class="row-div" style="margin-left:auto; margin-right:0px; overflow-y:auto;">
+            <Event_SelectorD Multi_Select="true" @bind-Selected_List="event_buffer" />
+            <Button Class="load-options" Disabled="@(event_buffer.Count == 0)" Variant="primary" OnClick="@(() => Export())">Export as JSon</Button>
+            <Button Class="load-options" Disabled="@(event_buffer.Count == 0)" Variant="primary" OnClick="@(() => Export_Python())">Export as Python JSon</Button>
+            <Button Class="load-options" Disabled="@(event_buffer.Count == 0)" Variant="primary" OnClick="@(() => Export_Escaped())">Export as string</Button>
+            <Button Class="load-options" Disabled="@(export_string == "")" Variant="primary" OnClick="@(() => export_string = "")">Clear Export</Button>
+            <Button Class="load-options" Disabled="@(event_buffer.Count == 0)" Variant="danger" OnClick="@(() => Remove_Events())">Multi-Delete</Button>
+        </div>
+    </Card>
+    @if (export_string != "")
+    {
+        <p style="margin:10px;">
+            @export_string
+        </p>
+    }
+</div>
+
+
+@code {
+    List<Stored_Event> event_buffer = [];
+    Stored_Event? event_holder = null;
+
+    Stored_Event? event_a = null;
+    Stored_Event? event_b = null;
+
+    string export_string = "";
+
+    void Create_New()
+    {
+        event_holder = new();
+        Load_Event();
+    }
+
+    static JsonSerializerOptions JSoptions = new() { IncludeFields = true };
+    void Export()
+    {
+        export_string = "{\"Event_Name\":\"\", \"Register_Events\":" + JsonSerializer.Serialize(event_buffer, JSoptions) + "}";
+    }
+    void Export_Python()
+    {
+        Export();
+        export_string = export_string.Replace(":false", ":False").Replace(":true", ":True").Replace(":null", ":None");
+    }
+    void Export_Escaped()
+    {
+        export_string = JsonSerializer.Serialize(event_buffer, JSoptions);
+        export_string = "\"{\\\"Event_Name\\\":\\\"\\\", \\\"Register_Events\\\":" + export_string.Replace("\"", "\\\"") + "}\"";
+    } 
+
+
+    void Remove_Event()
+    {
+        if (event_holder != null)
+        {
+            Config_Values.Remove_Events([event_holder]);
+        }
+    }
+
+    void Remove_Events()
+    {
+        Config_Values.Remove_Events([.. event_buffer]);
+    }
+
+    void Load_Event()
+    {
+        if (event_holder != null)
+        {
+            if (event_a is not null)
+            {
+                event_a = null;
+                event_b = event_holder;
+            }
+            else if (event_b is not null)
+            {
+                event_b = null;
+                event_a = event_holder;
+            }
+            else
+            {
+                event_a = event_holder;
+            }
+        }
+    }
+
+    private string Get_Event_Name(string key)
+    {
+        bool endpoint = !key.EndsWith('/');
+
+
+
+        //DynamicShockPlugin.Log_Info(key);
+        string[] parts = key.Split("/");
+
+        if (endpoint)
+        {
+            return parts[^1];
+        }
+        else if (parts.Length >= 2)
+        {
+            return parts[^2] + "/";
+        }
+        else
+        {
+            return key;
+        }
+    }
+
+    private string Get_Event_Decription(string key)
+    {
+        if (Config_Values.Get_Event(key) is Stored_Event se)
+        {
+            return se.Description;
+        }
+        return "";
+    }
+}

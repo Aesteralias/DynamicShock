@@ -1,0 +1,110 @@
+﻿@namespace DynamicShock.Components.Selector_D
+@using DynamicShock.Models;
+@using System.Text
+@using MultiShock.PluginSdk.Components
+
+<SelectorD Combo="@Combo" Multi_Select="@Multi_Select" Label="@Label" Placeholder_Text="Select Transform(s)"
+           Selected_List="@Value_List" Selected_List_Changed="@((e) => Value_List = [.. e])"
+           Value="@Value_Name" Value_Changed="@((e) => Value_Name = e)"
+           Value_Tree="Config_Values.Combined_Tree" Get_Name="Get_Name" Get_Description="Get_Decription" Selectable_Folder="false" Close_On_Select="@(!(Multi_Select))" />
+
+@code {
+    [Parameter]
+    public bool Combo { get; set; } = false;
+
+    [Parameter]
+    public bool Multi_Select { get; set; } = false;
+
+    [Parameter]
+    public string Label { get; set; } = "";
+
+
+    private List<string> _value_List = [];
+    private List<string> Value_List
+    {
+        get => _value_List;
+        set
+        {
+            if (_value_List.Count != value.Count)
+            {
+                _value_List = value;
+                List<Transform> transforms = [];
+                foreach (var item in _value_List)
+                {
+                    if (Config_Values.Get_Transform(item) is Transform t)
+                    {
+                        transforms.Add(t);
+                    }
+                }
+                Selected_List = transforms;
+                Selected_ListChanged.InvokeAsync(Selected_List);
+            }
+        }
+    }
+
+    [Parameter]
+    public List<Transform> Selected_List { get; set; } = [];
+    [Parameter]
+    public EventCallback<List<Transform>> Selected_ListChanged { get; set; }
+
+
+    private string _value_Name = "";
+    private string Value_Name
+    {
+        get => _value_Name;
+        set
+        {
+            if (_value_Name != value)
+            {
+                _value_Name = value;
+                Value = Config_Values.Get_Transform(value);
+                ValueChanged.InvokeAsync(Value);
+            }
+        }
+    }
+
+    [Parameter]
+    public Transform? Value { get; set; }
+    [Parameter]
+    public EventCallback<Transform?> ValueChanged { get; set; }
+
+
+    protected override void OnParametersSet()
+    {
+        _value_Name = Value?.Get_Name() ?? "";
+        foreach (var item in Selected_List)
+        {
+            _value_List.Add(item.Get_Name());
+        }
+        base.OnParametersSet();
+    }
+
+
+    private string Get_Decription(string key)
+    {
+        if (Config_Values.Get_Transform(key) is Transform t)
+        {
+            return t.Description;
+        }
+        return "";
+    }
+
+    string Get_Name(string key)
+    {
+        bool endpoint = !key.EndsWith('/');
+        string[] parts = key.Split("/");
+
+        if (endpoint)
+        {
+            return parts[^1];
+        }
+        else if (parts.Length >= 2)
+        {
+            return parts[^2] + "/";
+        }
+        else
+        {
+            return key;
+        }
+    }
+}

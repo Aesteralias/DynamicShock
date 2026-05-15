@@ -1,0 +1,164 @@
+﻿@page "/plugins/Aes-dynamicshock/EventEdit"
+@namespace DynamicShock.Components.Event_Editor
+
+@using DynamicShock.Components.Selector_D
+@using DynamicShock.Models;
+
+@using Microsoft.Extensions.Logging
+@using System.Text
+@using MultiShock.PluginSdk.Components
+
+
+<div class="space-y-6">
+    <style>
+        .select-override {
+            min-width: 150px;
+            width: 150px;
+            max-width: 200px;
+        }
+
+        .selected {
+            background-color: #4A9EFF20;
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
+
+        .prevent-select {
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10 and IE 11 */
+            user-select: none; /* Standard syntax */
+        }
+
+        .align-button {
+            margin-top: 20px;
+            max-height: 30px;
+        }
+        .align-Toggle {
+            margin-top: 20px;
+            margin-left: 8px;
+            margin-right: 8px;
+        }
+
+        .small-margin {
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
+
+        .bar-override {
+            margin-left: auto;
+            margin-right: 8px;
+        }
+
+        .row-div {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .column-div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .decimal-box {
+            max-width: 54px;
+        }
+
+        .enabled-box {
+            height: 40px;
+        }
+    </style>
+
+    <Card Title="@("Editing " + event_edit.Get_Name() + " " + (event_edit.IsSame(event_compare) ? "" : "* -Unsaved Changes"))">
+        <div class="row-div">
+            <div style="display:grid; gap:10px">
+                <div class="row-div">
+                    <TextInput Label="Event_Name" @bind-Value="event_edit.Name" Error="@(event_edit.Name=="" ? "Required to Save" : "")"/>
+                    <Event_Folder_SelectorD Label="Group_Name" @bind-Value="event_edit.Group" />
+                    <Button Text="Save" Class="align-button" OnClick="@(() => Save_Click())"/>
+                </div>
+                <TextInput Label="Description" @bind-Value="event_edit.Description" />
+
+                <Toggle Class="enabled-box" Label="Is Event Enabled?" @bind-Value="event_edit.Registered_Event" />
+
+                <ShockerSelect Label="Selected Shockers" MultiSelect="true" @bind-SelectedIds="event_edit.Ids" />
+                <Select Label="Which of the Selected Shockers are used" TValue="Selection_Type" Options="selection_types" @bind-Value="event_edit.Selection"/>
+                <Select Label="Event Command Type" TValue="CommandType" Options="shocker_actions" @bind-Value="event_edit.Command" />
+
+                <div class="row-div" style="margin-top:20px">
+                    <TextInput Disabled="@(event_edit.Any_Transforms())" Label="X-Axis Label" @bind-Value="event_edit.Label_X" Error="@(event_edit.Any_Transforms() ? "Requires All Dynamics to be null to edit" : "All Fields Required for Dynamic Values")" />
+                    <NumberInput Disabled="@(event_edit.Any_Transforms())" Label="Minimum Value" Step="0.01" @bind-Value="event_edit.Min_X" />
+                    <NumberInput Disabled="@(event_edit.Any_Transforms())" Label="Maximum Value" Step="0.01" @bind-Value="event_edit.Max_X" />
+                    <NumberInput Disabled="@(event_edit.Any_Transforms())" Label="Decimals" Step="1" Min="0" Max="9" Value="event_edit.X_Precision" ValueChanged="@((v) => { if (v is double ve) { event_edit.X_Precision = Convert.ToInt32(Math.Max(Math.Floor(ve),0)); } })" />
+                </div>
+
+                @foreach (KeyValuePair<Event_Value_Types, Event_Value> kp in event_edit.Values)
+                {
+                    <DynamicValueEdit compare_value="kp.Value" parent="event_edit" value_type="kp.Key" direct="true" rerender="StateHasChanged"/>
+                }
+                
+            </div>
+        </div>
+    </Card>
+</div>
+
+@code {
+    [Parameter]
+    public bool direct { get; set; } = false;
+
+    [Parameter, EditorRequired]
+    public Stored_Event event_compare { get; set; } = new();
+
+    Stored_Event event_edit = new();
+
+    protected override void OnInitialized()
+    {
+        if (direct)
+        {
+            event_edit = event_compare;
+        }
+        else
+        {
+            event_edit = event_compare.Copy();
+        }
+
+
+        foreach (Selection_Type sel_types in Enum.GetValues<Selection_Type>())
+        {
+            selection_types.Add(new Select<Selection_Type>.SelectOption<Selection_Type>(sel_types, sel_types.ToString()));
+        }
+        foreach (CommandType command in Enum.GetValues<CommandType>())
+        {
+            shocker_actions.Add(new Select<CommandType>.SelectOption<CommandType>(command, command.ToString()));
+        }
+
+        base.OnInitialized();
+    }
+
+    List<string> ids = [];
+    List<Select<Selection_Type>.SelectOption<Selection_Type>> selection_types = [];
+    List<Select<CommandType>.SelectOption<CommandType>> shocker_actions = [];
+
+    private bool Any_Transforms()
+    {
+        foreach (var value in event_edit.Values.Values)
+        {
+            if (value.Dynamic_Value != null)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void Save_Click()
+    {
+        if (Config_Values.Save_Event(event_edit.Copy(), event_compare.Get_Name()) is string n)
+        {
+            event_edit.Name = n;
+            if (Config_Values.Get_Event(event_edit.Get_Name()) is Stored_Event se)
+            {
+                event_compare = se;
+            }
+        }
+    }
+}

@@ -1,0 +1,172 @@
+﻿@namespace DynamicShock.Components.Selector_D
+
+@using DynamicShock.Models;
+
+@using System.Text
+@using MultiShock.PluginSdk.Components
+
+<div style="@(Show ? "display:block;" : "display:none;")" >
+    <div style="@((Folder && !Root ? " display:block;" : "display:none;") + $" padding-left:{Depth * 12}px")" class="SelectorD-Folder" @onclick="@(() => Expanded = !Expanded)">
+        <b class="SelectorD-Folder-Text">
+            @(Name)
+        </b>
+        <div class="SelectorD-Folder-Icon" style="@(!Expanded ? " display:block;" : "display:none;")">
+            <LucideIcon Name="chevron-right" Size="12"/>
+        </div>
+        <div class="SelectorD-Folder-Icon" style="@(Expanded ? " display:block;" : "display:none;")">
+            <LucideIcon Name="chevron-down" Size="12" />
+        </div>
+    </div>
+    <div class="@(IsSelected(Display) ? "SelectorD-Selected-Endpoint" : "SelectorD-Endpoint")" style="@(((Expanded && Selectable_Folder && !Root) || (Selectable && !Folder) ? "display:block;" : "display:none;") + $" padding-left:{Depth * 12}px")" @onclick="@(() => Change_Value(Display))">
+        <b class="@(IsSelected(Display) ? "SelectorD-Selected-Endpoint-Text" : "SelectorD-Endpoint-Text")">
+            @(Name)
+        </b>
+        <p class="SelectorD-Endpoint-Description">
+            @Description
+        </p>
+    </div>
+
+    <div style="@(Expanded ? "display:block;" : "display:none;")" class="SelectorD-Endpoints">
+        @foreach (string entry in Folder_Children)
+        {
+            <Selector_D_Folder 
+                Value_Tree="Value_Tree" 
+                Display="@(entry)" 
+                Change_Value="Change_Value" 
+                Get_Description="Get_Description" 
+                search_Container="deeper" 
+                Depth="Depth + 1"
+                Get_Name="Get_Name" 
+                IsSelected="IsSelected"
+                Selectable_Folder="Selectable_Folder"
+                />
+        }
+        @foreach (string entry in Endpoint_Children)
+        {
+            <Selector_D_Folder 
+                Value_Tree="Value_Tree" 
+                Display="@(entry)" 
+                Change_Value="Change_Value" 
+                Get_Description="Get_Description" 
+                search_Container="deeper" 
+                Depth="Depth + 1"
+                Get_Name="Get_Name"
+                IsSelected="IsSelected"
+                Selectable_Folder="Selectable_Folder"
+                />
+        }
+    </div>
+    
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Dictionary<string, List<string>> Value_Tree { get; set; }
+
+    [Parameter, EditorRequired]
+    public Action<string> Change_Value { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Display { get; set; }
+
+    [Parameter, EditorRequired]
+    public Search_Container search_Container { get; set; }
+
+    [Parameter]
+    public bool Selectable_Folder { get; set; } = false;
+
+    [Parameter]
+    public Func<string,string>? Get_Description { get; set; }
+
+    [Parameter]
+    public Func<string, string>? Get_Name { get; set; }
+
+    [Parameter]
+    public bool Root { get; set; } = false;
+
+    [Parameter]
+    public int Depth { get; set; } = -1;
+
+    [Parameter]
+    public Func<string, bool> IsSelected { get; set; } = ((s) => false);
+
+
+    private Search_Container deeper = new();
+
+
+    bool Expanded = false;
+    private bool Show = true;
+
+    string Description = "";
+    string Name = "";
+    List<string> Folder_Children = [];
+    List<string> Endpoint_Children = [];
+    bool Selectable = false;
+    bool Folder = false;
+
+    protected override void OnInitialized()
+    {
+        search_Container.Search_Update += ContainsSearch;
+
+        //DynamicShockPlugin.Log_Info(Display);
+
+        if (Value_Tree.TryGetValue(Display, out List<string>? entries))
+        {
+            foreach (var entry in entries)
+            {
+                if (entry == "")
+                {
+                    
+                }
+                else if (entry.EndsWith("/"))
+                {
+                    Folder_Children.Add(entry);
+                }
+                else if (!Selectable_Folder)
+                {
+                    Endpoint_Children.Add(entry);
+                }
+            }
+        }
+        if (Get_Description!=null)
+        {
+            Description = Get_Description.Invoke(Display);
+        }
+
+        Name = Display;
+        if (Get_Name != null)
+        {
+            Name = Get_Name.Invoke(Display);
+        }
+
+        if (Root)
+        {
+            Expanded = true;
+            Folder = true;
+        }
+        else if (Display.EndsWith("/"))
+        {
+            Folder = true;
+        }
+        else if (!Display.EndsWith("/"))
+        {
+            Selectable = true;
+        }
+        base.OnInitialized();
+    }
+
+    private void ContainsSearch(object? sender, Search_Event_Args e)
+    {
+        bool found = deeper.Run(e.comparison);
+        if (!found)
+        {
+            found = Display.Contains(e.comparison) || Description.Contains(e.comparison);
+        }
+        Show = found;
+        if (found)
+        {
+            Expanded = true;
+            e.found = true;
+        }
+    }
+}

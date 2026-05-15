@@ -1,0 +1,96 @@
+﻿@namespace DynamicShock.Components.Selector_D
+@using DynamicShock.Models;
+@using System.Text
+@using MultiShock.PluginSdk.Components
+
+<SelectorD Combo="@Combo" Multi_Select="@Multi_Select" Label="@Label" Placeholder_Text="Select Event(s)"
+    Selected_List="@Value_List" Selected_List_Changed="@((e) => Update_List(e))" 
+    Value="@Value_Name" Value_Changed="@((e) => Value_Name = e)"
+           Value_Tree="Config_Values.Event_Tree" Get_Name="Get_Name" Get_Description="Get_Decription" Selectable_Folder="false" Close_On_Select="@(!(Multi_Select))" />
+
+@code {
+    [Parameter]
+    public bool Combo { get; set; } = false;
+
+    [Parameter]
+    public bool Multi_Select { get; set; } = false;
+
+    [Parameter]
+    public string Label { get; set; } = "";
+
+    private List<string> Value_List = [];
+    private void Update_List(List<string> s)
+    {
+        List<Stored_Event> events = [];
+        foreach (var item in Value_List)
+        {
+            if (Config_Values.Get_Event(item) is Stored_Event se)
+            {
+                events.Add(se);
+            }
+        }
+        Selected_List = events;
+        Selected_ListChanged.InvokeAsync(Selected_List);
+    }
+
+
+    [Parameter]
+    public List<Stored_Event> Selected_List { get; set; } = [];
+    [Parameter]
+    public EventCallback<List<Stored_Event>> Selected_ListChanged { get; set; }
+
+
+    private string _value_Name = "";
+    private string Value_Name
+    {
+        get => _value_Name;
+        set
+        {
+            if (_value_Name != value)
+            {
+                _value_Name = value;
+                Value = Config_Values.Get_Event(value);
+                ValueChanged.InvokeAsync(Value);
+            }
+        }
+    }
+
+    [Parameter]
+    public Stored_Event? Value { get; set; } 
+    [Parameter]
+    public EventCallback<Stored_Event?> ValueChanged { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        _value_Name = Value?.Get_Name() ?? "";
+        base.OnParametersSet();
+    }
+
+    private string Get_Decription(string key)
+    {
+        if (Config_Values.Get_Event(key) is Stored_Event se)
+        {
+            return se.Description;
+        }
+        return "";
+    }
+
+    string Get_Name(string key)
+    {
+        bool endpoint = !key.EndsWith('/');
+        string[] parts = key.Split("/");
+
+        if (endpoint)
+        {
+            return parts[^1];
+        }
+        else if (parts.Length >= 2)
+        {
+            return parts[^2] + "/";
+        }
+        else
+        {
+            return key;
+        }
+    }
+}

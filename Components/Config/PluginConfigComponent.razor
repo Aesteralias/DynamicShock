@@ -1,0 +1,64 @@
+@namespace DynamicShock.Components.Config
+
+@using MultiShock.PluginSdk
+@using MultiShock.PluginSdk.Components
+@using DynamicShock.Models;
+
+<div class="space-y-4">
+    <div class="text-sm text-gray-400">
+        <p>Example Plugin plugin is active.</p>
+    </div>
+
+    <div class="text-xs text-gray-400 space-y-1">
+        <div><strong>Features:</strong></div>
+        <ul class="list-disc list-inside ml-2">
+            <li>WebSocket Endpoints</li>
+            <li>Storable Shock Events</li>
+            <li>Keyframing For Dynamic Shocks</li>
+        </ul>
+    </div>
+
+    <div><strong>WebSocket Config</strong></div>
+    <div class="text-xs text-gray-400 space-y-4">
+        <Card Title="Websocket Settings">
+            <Toggle Label="Enable WebSocket?" @bind-Value="Config_Values.Websocket_Enabled"></Toggle>
+            <Toggle Label="Default Enable Events Through WebSocket?" @bind-Value="Config_Values.Default_Enabled"></Toggle>
+        </Card>
+        
+        <Card Title="Event Settings">
+            <ShockerSelect Label="Default Shockers"
+                           Description="What devices/shockers should be used when none are provided."
+                           MultiSelect="true"
+                           GroupByDevice="true"
+                           @bind-SelectedIds="Config_Values.Default_Shockers">
+            </ShockerSelect>
+            <Slider Min="0" Max="100" Label="Global Event Max Intensity" Filled="true" ShowValue="true" @bind-Value="Config_Values.Global_Max_Intensity" Step="1"></Slider>
+        </Card>
+
+        <Card Title="Node Settings">
+            <NumberInput Label="Number of I/O ports on emitter/recieve nodes (WIP, Restart)" Min="0" Step="1" Value="Config_Values.Signal_Port_Number" ValueChanged="@((d) => Set_SPN(d))"></NumberInput>
+        </Card> 
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? PluginId { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Initialization logic
+    }
+
+    void Set_SPN(double? value)
+    {
+        try
+        {
+            if (value != null)
+            {
+                Config_Values.Signal_Port_Number = Convert.ToInt16(value);
+            }
+        }
+        catch {}
+    }
+}

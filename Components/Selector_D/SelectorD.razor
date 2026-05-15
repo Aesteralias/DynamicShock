@@ -1,0 +1,316 @@
+﻿@namespace DynamicShock.Components.Selector_D
+
+
+
+@using DynamicShock.Models;
+
+@using System.Text
+@using MultiShock.PluginSdk.Components
+
+
+<div style="@(Label=="" ? "" : "margin-top:-4px;")">
+    <Selector_D_Style />
+    <label class="SelectorD-Label">@Label</label>
+    <div class="SelectorD-Box" tabindex="0" @onfocus="@(() => Focus(false))" @onblur="@(() => DeFocus())" onmousedown="@(() => Click())">
+        @if (Combo)
+        {
+            <input 
+                placeholder="Type or Select Event" 
+                type="text" class="SelectorD-ComboText"
+                @onfocus="@(() => Focus(false))"
+                @onblur="@(() => DeFocus())"
+                @bind:get="@(Value)"
+                @bind:set="@((s) => Change_Value(s, true))" />
+        }
+        else
+        {
+            <label class="SelectorD-Display">
+                @Component_Display()
+            </label>
+            @if (Value == "" && Selected_List.Count==0)
+            {
+                <label class="SelectorD-Display Placeholder">
+                    @(Placeholder_Text)
+                </label>
+            }
+        }
+        <div class="SelectorD-Icon" style="@(Expanded ? "display:none;" : "display:block;")">
+            <LucideIcon Name="chevron-down" />
+        </div>
+        <div class="SelectorD-Icon" style="@(!Expanded ? "display:none;" : "display:block;")">
+            <LucideIcon Name="chevron-up" />
+        </div>
+    </div>
+    @if (Expanded)
+    {
+        <div class="SelectorD-DropDown" tabindex="1" @onfocus="@(() => Focus())" @onblur="@(() => DeFocus())">
+            @if (Multi_Select)
+            {
+                <div class="SelectorD-Selectors" >
+                    <a class="SelectorD-Selectors-Text" @onclick="@(() => Select_All())">
+                        All
+                    </a>
+                    <a class="SelectorD-Selectors-Text" @onclick="@(() => Select_Filtered())">
+                        Filtered
+                    </a>
+                    <a class="SelectorD-Selectors-Text" @onclick="@(() => Clear_All())">
+                        None
+                    </a>
+                </div>
+            }
+            <div class="SelectorD-DropSearch">
+                <input 
+                    placeholder="Search by Name, Group, or Description" 
+                    type="text" 
+                    class="SelectorD-SearchText" 
+                    @onfocus="@(() => Focus())" 
+                    @onblur="@(() => DeFocus())" 
+                    @bind:get="@(search)" 
+                    @oninput="@((s) => SB_On_Input(s))" />
+            </div>
+            <Selector_D_Folder 
+                Value_Tree="Value_Tree" 
+                Display="" 
+                Change_Value="Change_Value" 
+                Get_Description="Get_Description" 
+                Root="true" 
+                search_Container="search_Container" 
+                Depth="0" 
+                Get_Name="Get_Name" 
+                IsSelected="IsSelected"
+                Selectable_Folder ="Selectable_Folder"
+                />
+        </div>
+    }
+</div>
+
+@code {
+    //<TextInput Placeholder="Search by Group/Name" />
+
+    [Parameter]
+    public bool Combo { get; set; } = false;
+
+    [Parameter]
+    public bool Multi_Select { get; set; } = false;
+
+    [Parameter]
+    public List<string> Selected_List { get; set; } = [];
+
+    [Parameter]
+    public Action<List<string>>? Selected_List_Changed { get; set; }
+
+    [Parameter]
+    public string Value { get; set; } = "";
+
+    [Parameter]
+    public Action<string>? Value_Changed { get; set; }
+
+    [Parameter]
+    public bool Close_On_Select { get; set; } = true;
+
+    [Parameter]
+    public bool Selectable_Folder { get; set; } = false;
+
+    [Parameter]
+    public Func<string, string>? Get_Description { get; set; }
+
+    [Parameter]
+    public Func<string, string>? Get_Name { get; set; }
+
+    [Parameter]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public string Placeholder_Text { get; set; } = "Select an Event";
+
+    [Parameter, EditorRequired]
+    public Dictionary<string, List<string>> Value_Tree { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        if (Multi_Select)
+        {
+            Combo = false;
+        }
+        base.OnInitialized();
+    }
+
+    private String search = "";
+    private Search_Container search_Container = new();
+
+    private string Component_Display()
+    {
+        if (Multi_Select && Selected_List.Count > 0)
+        {
+            if (Selected_List.Count == 1)
+            {
+                return Selected_List[0];
+            }
+            return $"({Selected_List.Count}) Selected";
+        }
+        else
+        {
+            return Value;
+        }
+    }
+
+    private bool IsSelected(string key)
+    {
+        if (Multi_Select)
+        {
+            return Selected_List.Contains(key);
+        }
+        return Value == key;
+    }
+
+
+    bool Prevent_Collapse = false;
+    bool Expanded = false;
+    private void Focus(bool child = true)
+    {
+        if (!Expanded)
+        {
+            Expanded = true;
+        }
+        else if (child)
+        {
+            Prevent_Collapse = true;
+        }
+    }
+    private async void DeFocus()
+    {
+        await Task.Delay(3);
+        if (!Prevent_Collapse)
+        {
+            Expanded = false;
+            StateHasChanged();
+        }
+        Prevent_Collapse = false;
+    }
+
+    private void SB_On_Input(ChangeEventArgs e)
+    {
+        if (e.Value is string s)
+        {
+            search = s;
+            search_Container.Run(s);
+            StateHasChanged();
+        }
+    }
+
+    private void Click()
+    {
+        if (Expanded)
+        {
+            DeFocus();
+        }
+        else
+        {
+            Focus(false);
+        }
+    }
+
+    internal void Select_All()
+    {
+        if (Multi_Select)
+        {
+            Selected_List.Clear();
+            foreach (List<string> entries in Value_Tree.Values)
+            {
+                foreach (string entry in entries)
+                {
+                    if (Selectable_Folder)
+                    {
+                        if (entry.EndsWith('/'))
+                        {
+                            Selected_List.Add(entry);
+                        }
+                    }
+                    else
+                    {
+                        if (!entry.EndsWith('/') && entry != "")
+                        {
+                            Selected_List.Add(entry);
+                        }
+                    }
+                }
+            }
+            Selected_List_Changed?.Invoke(Selected_List);
+        }
+    }
+
+    internal void Select_Filtered()
+    {
+        if (Multi_Select)
+        {
+            Selected_List.Clear();
+            foreach (List<string> entries in Value_Tree.Values)
+            {
+                foreach (string entry in entries)
+                {
+                    if (entry.Contains(search))
+                    {
+                        if (Selectable_Folder)
+                        {
+                            if (entry.EndsWith('/'))
+                            {
+                                Selected_List.Add(entry);
+                            }
+                        }
+                        else
+                        {
+                            if (!entry.EndsWith('/') && entry != "")
+                            {
+                                Selected_List.Add(entry);
+                            }
+                        }
+                    }
+                }
+            }
+            Selected_List_Changed?.Invoke(Selected_List);
+        }
+    }
+
+    internal void Clear_All()
+    {
+        if (Multi_Select)
+        {
+            Selected_List.Clear();
+            Selected_List_Changed?.Invoke(Selected_List);
+        }
+    }
+
+    internal void Change_Value(string value)
+    {
+        Change_Value(value, false);
+    }
+
+    internal void Change_Value(string value, bool prevent)
+    {
+        if (Multi_Select)
+        {
+            if (Selected_List.Contains(value))
+            {
+                Selected_List.Remove(value);
+            }
+            else
+            {
+                Selected_List.Add(value);
+            }
+            Selected_List_Changed?.Invoke(Selected_List);
+        }
+        else
+        {
+            Value = value;
+            Value_Changed?.Invoke(Value);
+            if (!prevent && Close_On_Select)
+            {
+                Prevent_Collapse = false;
+                DeFocus();
+            }
+        }
+        StateHasChanged();
+    }
+
+}

@@ -1,0 +1,94 @@
+﻿@page "/plugins/Aes-dynamicshock/LoadTransforms"
+@namespace DynamicShock.Components.Transform_Editor
+
+@using DynamicShock.Components.Selector_D
+@using DynamicShock.Models;
+
+@using Microsoft.Extensions.Logging
+@using System.Text
+@using MultiShock.PluginSdk.Components
+@using VectSharp
+@using VectSharp.Plots
+@using VectSharp.SVG
+
+<div>
+    <style>
+        .select-override-l {
+            min-width: 150px;
+            width: 150px;
+            max-width: 200px;
+        }
+        .row-div-l {
+            display:flex; 
+            flex-direction: row;
+            gap: 5px;
+        }
+    </style>
+
+    <Card Title="Load Transform" >
+        <div class="row-div-l">
+            
+            <Transform_SelectorD @bind-Value="transform_buffer"/>
+            <Button Variant="primary" OnClick="@(() => Create_New())">Create New</Button>
+            <Button Variant="primary" Disabled="@(transform_buffer == null)" OnClick="@(() => Load_Transform())">Load</Button>
+            <Button Variant="danger" Disabled="@(transform_buffer == null ? true : transform_buffer.T_Name.EndsWith("-Copy"))" OnClick="@(() => Delete())">Delete</Button>
+        </div>
+    </Card>
+    @if (transform_a != null)
+    {
+        <Edit_Transform transform_compare="transform_a"/>
+    }
+    @if (transform_b != null)
+    {
+        <Edit_Transform transform_compare="transform_b" />
+    }
+</div>
+
+
+@code {
+    Transform? transform_buffer = null;
+
+    Transform? transform_a = null;
+    Transform? transform_b = null;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    void Create_New()
+    {
+        transform_buffer = new();
+        Load_Transform();
+    }
+    void Load_Transform()
+    {
+        if (transform_buffer is Transform t)
+        {
+            if (transform_a is not null)
+            {
+                transform_a = null;
+                transform_b = t;
+            }
+            else if (transform_b is not null)
+            {
+                transform_b = null;
+                transform_a = t;
+            }
+            else
+            {
+                transform_a = t;
+            }
+        }
+    }
+    void Delete()
+    {
+        if (transform_buffer is not null)
+        {
+            if (!transform_buffer.T_Name.EndsWith("-Copy"))
+            {
+                Config_Values.Remove_Transforms([transform_buffer]);
+            }
+        }
+    }
+}

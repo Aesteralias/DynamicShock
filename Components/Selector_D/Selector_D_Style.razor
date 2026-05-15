@@ -1,0 +1,206 @@
+﻿@namespace DynamicShock.Components.Selector_D
+
+<style>
+    .SelectorD-Label {
+        font-size: 12px;
+        color: #A1A8A8;
+    }
+
+    .SelectorD-Box {
+        border-radius: 5px;
+        border-width: 1px;
+        border-color: #343A40;
+        background-color: #292929;
+        height: 34px;
+        min-width: 300px;
+        position: relative;
+    }
+
+    .SelectorD-Box:focus {
+        border-color: #4A9EFF;
+        outline: none;
+    }
+
+    .SelectorD-Display {
+        padding-left: 10px;
+        position: absolute;
+        left: 3px;
+        top: 50%;
+        transform: translate(0,-50%);
+        font-size: 12px;
+    }
+
+    .SelectorD-Placeholder {
+        color: #A1A8A8;
+    }
+
+    .SelectorD-DropDown {
+        position: absolute;
+        margin-top: 8px;
+        border-radius: 5px;
+        border-width: 1px;
+        border-color: #343A40;
+        background-color: #222222;
+        width: 300px;
+        opacity: 100;
+        z-index: +4;
+    }
+
+    .SelectorD-ComboText {
+        position: absolute;
+        left: 0px;
+        top: 50%;
+        transform: translate(0,-50%);
+        border-radius: 5px;
+        border-width: 1px;
+        background-color: #1F2937;
+        caret-color: currentColor;
+        border-color: #343A40;
+        height: 32px;
+        font-size: 12px;
+    }
+
+    .SelectorD-ComboText::placeholder {
+        color: #A1A8A8;
+    }
+
+    .SelectorD-ComboText:focus {
+        border-color: #3B82F6;
+        border-width: 1px;
+        outline: none;
+    }
+
+    .SelectorD-DropSearch {
+        background-color: #222222;
+        margin: 10px 12px;
+        height: 30px;
+        position: relative;
+    }
+
+    .SelectorD-SearchText {
+        position: absolute;
+        left: 5px;
+        top: 50%;
+        transform: translate(0,-50%);
+        border-radius: 5px;
+        border-width: 1px;
+        background-color: #1F2937;
+        caret-color: currentColor;
+        border-color: #343A40;
+        height: 32px;
+        font-size: 12px;
+    }
+
+    .SelectorD-SearchText::placeholder {
+        color: #A1A8A8;
+    }
+
+    .SelectorD-SearchText:focus {
+        border-color: #3B82F6;
+        border-width: 1px;
+        outline: none;
+    }
+
+    .SelectorD-Icon {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translate(0,-50%);
+    }
+
+    .SelectorD-Endpoints {
+        outline: solid;
+        outline-width: 1px;
+        outline-color: #343A40;
+    }
+
+    .SelectorD-Folder {
+        background-color: #222222;
+        width: auto;
+        position: relative;
+        padding: 1px;
+        padding-left: 12px;
+        outline: solid;
+        outline-width: 1px;
+        outline-color: #343A40;
+    }
+
+    .SelectorD-Folder:hover {
+        background-color: #292929;
+        cursor: pointer;
+    }
+
+    .SelectorD-Folder-Text {
+        font-size: 11px;
+        color: #A3AAB2;
+    }
+
+    .SelectorD-Folder-Icon {
+        position: absolute;
+        top: 50%;
+        transform: translate(0,-50%);
+        right: 2px;
+    }
+
+    .SelectorD-Endpoint {
+        padding-top: 3px;
+        padding-bottom: 6px;
+        background-color: #1E1E1E;
+    }
+
+    .SelectorD-Endpoint:hover {
+        background-color: #232323;
+        cursor: pointer;
+    }
+
+    .SelectorD-Selected-Endpoint {
+        padding-top: 3px;
+        padding-bottom: 6px;
+        background-color: #232B35;
+    }
+
+    .SelectorD-Selected-Endpoint:hover {
+        background-color: #232323;
+        cursor: pointer;
+    }
+
+    .SelectorD-Endpoint-Text {
+        color: #FFFFFF;
+        font-size: 12px;
+    }
+
+    .SelectorD-Selected-Endpoint-Text {
+        color: #427FC7;
+        font-size: 12px;
+    }
+
+    .SelectorD-Endpoint-Description {
+        font-size: 12px;
+        color: #A4ABB3;
+    }
+
+    .SelectorD-Selectors {
+        display: flex;
+        flex-direction: row;
+        outline: solid;
+        outline-width: 1px;
+        outline-color: #343A40;
+        height: 30px;
+    }
+
+    .SelectorD-Selectors-Text {
+        font-size: 12px;
+        color: #427FC7;
+        margin-left: 10px;
+        margin-top: 6px;
+    }
+
+    .SelectorD-Selectors-Text:hover {
+        cursor: pointer;
+    }
+
+</style>
+
+@code {
+
+}

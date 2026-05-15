@@ -1,0 +1,929 @@
+﻿@page "/plugins/Aes-dynamicshock/GraphEdit"
+@namespace DynamicShock.Components.Transform_Editor
+
+@using DynamicShock.Components.Selector_D
+@using DynamicShock.Models;
+
+@using Microsoft.Extensions.Logging
+@using System.Text
+@using MultiShock.PluginSdk.Components
+@using VectSharp
+@using VectSharp.Plots
+@using VectSharp.SVG
+
+<div class="space-y-6" >
+    <link href="DynamicStyleSheet.css" rel="stylesheet"/>
+    <style>
+        .select-override {
+            min-width: 150px;
+            width: 150px;
+            max-width: 200px;
+        }
+        .selected {
+            background-color: #4A9EFF20;
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
+        .prevent-select {
+          -webkit-user-select: none; /* Safari */
+          -ms-user-select: none; /* IE 10 and IE 11 */
+          user-select: none; /* Standard syntax */
+        }
+        .align-button {
+            margin-top: 20px;
+        }
+        .small-margin {
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
+        .bar-override {
+            margin-left: auto;
+            margin-right: 8px;
+        }
+        .row-div {
+            display: flex;
+            flex-direction: row;
+        }
+        .column-div {
+            display: flex;
+            flex-direction: column;
+        }
+        .decimal-box {
+            max-width: 54px;
+        }
+    </style>
+    <div class="row-div">
+        <Card Title="@("Editing "+ transform_edit.Get_Name() + (transform_compare.IsSaved(transform_edit) ? "" : "* -Unsaved Changes"))">
+            <div class="@(side_settings ? "row-div" : "column-div")">
+                <div class="prevent-select" @onpointerdown:preventDefault @onpointerdown="@(e => Select_Position(e))" @onpointerup="@(e => Deselect_Position(e, false))" @onpointermove="@(e => Update_Selected_Position(e))" @onpointerleave="@(e => Deselect_Position(e, true))">
+                    @((MarkupString)svg_display)
+                </div>
+                <div>
+                    <div class="row-div" style="margin-top:5px">
+                        @foreach (Setting_Pages page_string in setting_pages)
+                        {
+                            <Button Variant="@(selected_setting==page_string ? "primary" : "secondary")" OnClick="@(() => selected_setting = selected_setting==page_string ? null : page_string)">@page_string</Button>
+                        }
+                    </div>
+                    <div>
+                        <div style="display:@(selected_setting==Setting_Pages.Visual ? "block" : "none")">
+                            <Card Title="Graph Visual Changes">
+                                <Toggle Label="Move options to side" @bind-Value="side_settings" />
+                                <Toggle Label="Auto swap to Values" @bind-Value="value_swap_toggle" />
+
+                                <NumberInput Label="Graph Size"
+                                    Min="5"
+                                    Max="10"
+                                    Value="size"
+                                    ValueChanged="@((double? v) => { if (v is double vn) { size=(int)Math.Floor(vn); graph_width = Convert.ToInt32(v*70); Create_Graph(); }})" />
+
+                                <Slider Label="Input Viewbox" Min="transform_edit.Min_X" Max="transform_edit.Max_X" Step="1" RangeMode="true" RangeStart="min_view" RangeEnd="max_view" Filled="true" ShowValue="false"
+                                    RangeStartChanged="@((double v) => {min_view = v; Create_Graph();})"
+                                    RangeEndChanged="@((double v) => {max_view = v; Create_Graph();})" />
+
+                                <TextInput Disabled="Restrict_Controls" Label="X Axis Label" @bind-Value="transform_edit.Label_X" />
+                                <TextInput Label="Y Axis Label" @bind-Value="transform_edit.Label_Y" />
+                            </Card>
+                        </div>
+                        <div style="display:@(selected_setting==Setting_Pages.Setup ? "block" : "none")">
+                            <Card Title="Transform Limit Settings">
+                                <div style="margin-top:10px; margin-bottom:10px;">
+                                    <div class="row-div">
+                                        <NumberInput Label="@($"{transform_edit.Label_X}: Min")"
+                                            Value="transform_edit.Min_X"
+                                            ValueChanged="@((double? v) => Change_Min_X(v))" />
+                                        
+                                        <NumberInput Label="Max"
+                                            Value="transform_edit.Max_X"
+                                            ValueChanged="@((double? v) => Change_Max_X(v))" 
+                                            />
+                                        
+                                        <NumberInput Label="Decimals"
+                                            Value="transform_edit.X_Precision"
+                                            Min="0"
+                                            Max="9"
+                                            Step="1"
+                                            ValueChanged="@((double? v) => { if (v is double vn) { transform_edit.X_Precision = (int)Math.Floor(vn); }})" 
+                                            Class="decimal-box"/>
+                                    </div>
+
+                                    
+                                </div>
+                       
+                                <div style="margin-top:10px; margin-bottom:10px;">
+                                    <div class="row-div">
+                                        <NumberInput Label="@($"{transform_edit.Label_Y}: Min")"
+                                            Value="transform_edit.Min_Y"
+                                            ValueChanged="@((double? v) => { if (v is double vn) { transform_edit.Min_Y = vn; Create_Graph(); }})" />
+
+                                        <NumberInput Label="Max"
+                                            Value="transform_edit.Max_Y"
+                                            ValueChanged="@((double? v) => { if (v is double vn) { transform_edit.Max_Y = vn; Create_Graph(); }})" />
+
+                                        <NumberInput Label="Decimals"
+                                            Value="transform_edit.Y_Precision"
+                                            Min="0"
+                                            Max="9"
+                                            Step="1"
+                                            ValueChanged="@((double? v) => { if (v is double vn) { transform_edit.Y_Precision = (int)Math.Floor(vn); }})" 
+                                            Class="decimal-box"/>
+                                    </div>
+                                </div>
+                        
+
+                                <Slider Class="bar-override" Label="@($"Clamping {transform_edit.Label_Y} Values")" Min="@transform_edit.Min_Y" Max="@transform_edit.Max_Y" Step="@(Math.Pow(10,-transform_edit.Y_Precision))" RangeMode="true" RangeStart="transform_edit.Clamp_Min" RangeEnd="transform_edit.Clamp_Max" Filled="true" ShowValue="true"
+                                    RangeStartChanged="@((double v) => {transform_edit.Clamp_Min = v; Create_Graph();})"
+                                    RangeEndChanged="@((double v) => {transform_edit.Clamp_Max = v; Create_Graph();})" />
+                            
+                            </Card>
+                        </div>
+                        <div style="display:@(selected_setting==Setting_Pages.Values ? "block" : "none")">
+                            <Card Title="Keyframes and Interpolation Settings" >
+                                <div style="max-height:@($"{(50*size)-120}px"); min-width:350px; overflow:scroll; scrollbar-width:none; ">
+                                    @foreach (Keyframe keys in transform_edit.Keyframes)
+                                    {
+                                        <div class="@(keys == selected_keyframe || keys==hover_keyframe ? "selected" : "small-margin")">
+                                            <div style="display:flex; flex-direction: row; justify-content: center; align-items: center; ">
+                                                <NumberInput Label="@(keys == transform_edit.Keyframes[0] ? "Input" : "")"
+                                                                Min="transform_edit.Min_X"
+                                                                Max="transform_edit.Max_X"
+                                                                Step="@(Math.Pow(10,-transform_edit.X_Precision))"
+                                                                Value="keys.Input"
+                                                                ValueChanged="@((double? v) => { if (v is double vn) { keys.Input = vn; Create_Graph(); }})" />
+                    
+                                                <NumberInput Label="@(keys == transform_edit.Keyframes[0] ? "Output" : "")"
+                                                                Min="0"
+                                                                Max="100"
+                                                                Step="@(Math.Pow(10,-transform_edit.Y_Precision))"
+                                                                Value="keys.Output"
+                                                                ValueChanged="@((double? v) => { if (v is double vn) { keys.Output = vn; Create_Graph(); }})" />
+
+                                                <Select TValue="Interpolation"
+                                                        Class="select-override"
+                                                        Label="@(keys == transform_edit.Keyframes[0] ? "Interpolation Curve" : "")"
+                                                        Value="keys.Interpolation"
+                                                        ValueChanged="@((Interpolation i) => { keys.Interpolation=i; Create_Graph();})"
+                                                        Options="Interpol_Select">
+                                                
+                                                </Select>
+                                                <Button Class="@(keys == transform_edit.Keyframes[0] ? "align-button" : "")" Variant="danger" OnClick="@(() => {  if (transform_edit.Keyframes.Count > 1) {transform_edit.Keyframes.Remove(keys);} Create_Graph(); })">
+                                                    <LucideIcon Name="trash-2" Size="18"/>
+                                                </Button>
+                                                
+                                            </div>
+                                        </div>
+                                    }
+                                    <div style="display:flex; flex-direction: row;  justify-content: center; align-items: center; padding: 5px">
+                                        <Button Variant="secondary" OnClick="@(() => AddnewKeyFrame())">+</Button>
+                                    </div>
+
+                                </div>
+                            </Card>
+                        </div>
+
+                        <div style="display:@(selected_setting==Setting_Pages.Copy ? "block" : "none")">
+                            <Card Title="Overwrite Transform" >
+                                <Transform_SelectorD Label="Overwrite from: " @bind-Value="transform_buffer" />
+                                <Button Text="Everything" Variant="danger" Disabled="Restrict_Controls" Class="align-button" OnClick="@(() => { 
+                                    if(transform_buffer is Transform t) {
+                                        if (t.Min_X >= min_view) { min_view = t.Min_X; }
+                                        if (t.Max_X <= max_view) { max_view = t.Max_X; }
+                                        t.CopyTo(transform_edit);
+                                        
+                                        Create_Graph();
+                                    }})"/>
+                                <div class="row-div">
+                                    <Button Text="Details" Variant="danger" Disabled="Restrict_Controls" Class="align-button" OnClick="@(() => { 
+                                        if(transform_buffer is Transform t) { 
+                                            t.CopyTo(transform_edit, copy_details:true);
+                                            Create_Graph();
+                                        }})"/>
+                                    <Button Text="Keyframes" Variant="danger" Class="align-button" OnClick="@(() => { 
+                                        if(transform_buffer is Transform t) { 
+                                            transform_compare = t;
+                                            t.CopyTo(transform_edit, copy_keyframes:true);
+                                            Create_Graph();
+                                        }})"/>
+                                </div>
+                                <div class="row-div">
+                                    <Button Text="X-Axis" Variant="danger" Disabled="Restrict_Controls" Class="align-button" OnClick="@(() => { 
+                                        if(transform_buffer is Transform t) { 
+                                            transform_compare = t;
+                                            if (t.Min_X > min_view) { min_view = t.Min_X; }
+                                            if (t.Max_X < min_view) { max_view = t.Max_X; }
+                                            t.CopyTo(transform_edit, copy_x_axis:true);
+                                            Create_Graph();
+                                        }})"/>
+                                    <Button Text="Y-Axis" Variant="danger" Class="align-button" OnClick="@(() => { 
+                                        if(transform_buffer is Transform t) { 
+                                            transform_compare = t;
+                                            t.CopyTo(transform_edit, copy_y_axis:true);
+                                            Create_Graph();
+                                        }})"/>
+                                </div>
+                            </Card>
+                        </div>
+
+
+                        <div style="display:@(selected_setting==Setting_Pages.Save ? "block" : "none")">
+                            <Card Title="Save Transform">
+                                <div>
+                                    <TextInput Label="Name" @bind-Value="transform_edit.T_Name"/>
+                                    <Transform_Folder_SelectorD Label="Group" @bind-Value="transform_edit.Group" />
+                                    <TextInput Label="Description" @bind-Value="transform_edit.Description"/>
+
+                                    <Button Variant="primary" OnClick="@(() => Save_Transform())">Save</Button>
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Card>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Transform transform_compare { get; set; } = new();
+
+    public Transform transform_edit { get; set; } = new();
+
+    [Parameter]
+    public int size { get; set; } = 9;
+
+    [Parameter]
+    public bool direct { get; set; } = false;
+
+    bool Restrict_Controls = false;
+
+    Setting_Pages? selected_setting = Setting_Pages.Values;
+
+    Setting_Pages[] setting_pages = [
+        Setting_Pages.Values,
+        Setting_Pages.Setup,
+        Setting_Pages.Visual,
+        Setting_Pages.Copy,
+        Setting_Pages.Save
+    ];
+
+    enum Setting_Pages
+    {
+        Visual = 0,
+        Setup = 1,
+        Values = 2,
+        Copy = 3,
+        Save = 4
+    }
+
+    bool side_settings = true;
+    bool value_swap_toggle = true;
+
+    Transform? transform_buffer;
+
+    protected override void OnInitialized()
+    {
+
+
+        if (direct)
+        {
+            transform_edit = transform_compare;
+            Restrict_Controls = true;
+            setting_pages = [
+                Setting_Pages.Values,
+                Setting_Pages.Visual,
+                Setting_Pages.Copy,
+        ];
+        }
+        else
+        {
+            transform_edit = transform_compare.Copy();
+        }
+
+
+
+        foreach (Interpolation Interpol in Enum.GetValues(typeof(Interpolation)))
+        {
+            Interpol_Select.Add(new Select<Interpolation>.SelectOption<Interpolation>(Interpol, Interpol.ToString()));
+        }
+
+        min_view = transform_edit.Min_X;
+        max_view = transform_edit.Max_X;
+        graph_width = 70 * size;
+
+        Load_Transform_Loading();
+
+        Create_Graph();
+
+        base.OnInitialized();
+    }
+
+    void Load_Transform_Loading()
+    {
+        Transform_Loading.Clear();
+
+        foreach (string g_name in Config_Values.Get_Transform_Names())
+        {
+            if (Config_Values.Get_Transform(g_name) is Transform g)
+            {
+                Transform_Loading.Add(new Select<Transform>.SelectOption<Transform>(g, g.T_Name));
+            }
+        }
+    }
+
+    void Save_Transform()
+    {
+        if (Config_Values.Save_Transform(transform_edit.Copy(), transform_compare.Get_Name()) is string n) 
+        { 
+            transform_edit.T_Name = n;
+            if (Config_Values.Get_Transform(transform_edit.Get_Name()) is Transform t)
+            {
+                transform_compare = t;
+            }
+        }
+    }
+
+    void Change_Min_X(double? v)
+    {
+        if (v is double vn) 
+        {
+            bool in_step = min_view == transform_edit.Min_X;
+            transform_edit.Min_X = vn; 
+            if (min_view < vn || in_step) 
+            { 
+                min_view = vn; 
+            }
+            Create_Graph();
+        }
+    }
+
+    void Change_Max_X(double? v)
+    {
+        if (v is double vn) 
+        {
+            bool in_step = min_view == transform_edit.Max_X;
+            transform_edit.Max_X = vn; 
+            if (min_view > vn || in_step) 
+            { 
+                min_view = vn; 
+            }
+            Create_Graph();
+        }
+    }
+
+
+    List<Select<Interpolation>.SelectOption<Interpolation>> Interpol_Select = [];
+
+    List<Select<Transform>.SelectOption<Transform>> Transform_Loading = [];
+
+    void AddnewKeyFrame()
+    {
+        if (transform_edit.Keyframes.Count==0)
+        {
+            transform_edit.Keyframes.Add(new(0, 0, Interpolation.linear));
+            return;
+        }
+        transform_edit.Keyframes.Add(new(transform_edit.Keyframes[^1].Input+1, transform_edit.Keyframes[^1].Output, Interpolation.linear));
+        Create_Graph();
+    }
+
+    Keyframe? minus_sel_keyframe;
+    Keyframe? selected_keyframe;
+    Keyframe? plus_sel_keyframe;
+
+    Keyframe? hover_keyframe;
+
+    void Select_Position(PointerEventArgs e)
+    {
+
+        double[] data_values = Point_Screen_To_Value([e.OffsetX, e.OffsetY]);
+
+        Keyframe? close_kf = Closest_Keyfame(data_values);
+        if (close_kf != null)
+        {
+            if (value_swap_toggle)
+            {
+                selected_setting = Setting_Pages.Values;
+            }
+
+            if (e.Button == 0)
+            {
+                selected_keyframe = close_kf;
+                Select_Neighbours();
+            }
+            else if (e.Button == 1)
+            {
+                close_kf.Next_Interpolation();
+            }
+            else if (e.Button == 2)
+            {
+                if (transform_edit.Keyframes.Count > 1)
+                {
+                    transform_edit.Keyframes.Remove(close_kf);
+                }
+            }
+            return;
+        }
+
+        if (e.Button == 2)
+        {
+            Keyframe kf = new(Math.Round(data_values[0], transform_edit.X_Precision), Math.Round(data_values[1], transform_edit.Y_Precision), Interpolation.linear);
+            hover_keyframe = kf;
+            if (transform_edit.Keyframes.Count == 0)
+            {
+                transform_edit.Keyframes.Add(kf);
+            }
+            else
+            {
+                if (kf.Input < transform_edit.Keyframes[0].Input)
+                {
+                    transform_edit.Keyframes.Insert(0, kf);
+                }
+                else if (kf.Input > transform_edit.Keyframes[^1].Input)
+                {
+                    transform_edit.Keyframes.Add(kf);
+                }
+                else if (transform_edit.Keyframes.Count >= 2)
+                {
+                    for (int i = 0; i<transform_edit.Keyframes.Count-1; i++)
+                    {
+                        if (kf.Input > transform_edit.Keyframes[i].Input && kf.Input < transform_edit.Keyframes[i+1].Input)
+                        {
+                            transform_edit.Keyframes.Insert(i+1, kf);
+                            break;
+                        }
+                    }   
+                }
+            }
+
+
+        }
+    }
+
+    Keyframe? Closest_Keyfame(double[] locus)
+    {
+        Keyframe? closest = null;
+        double distance = 9999999999;
+        foreach (Keyframe kf in transform_edit.Keyframes)
+        {
+            double kf_distance = Math.Sqrt(Math.Pow((kf.Input - locus[0]) * ((transform_edit.Max_Y - transform_edit.Min_Y) / (max_view - min_view)), 2) + Math.Pow(kf.Output - locus[1], 2));
+            if (kf_distance < distance)
+            {
+                distance = kf_distance;
+                closest = kf;
+            }
+
+        }
+
+
+
+        if (distance <= 3 * ((transform_edit.Max_Y - transform_edit.Min_Y)/100))
+        {
+            return closest;
+        }
+        return null;
+    }
+
+    void Select_Neighbours()
+    {
+        if (selected_keyframe != null)
+        {
+            int index = transform_edit.Keyframes.IndexOf(selected_keyframe);
+            if (index > 0)
+            {
+                minus_sel_keyframe = transform_edit.Keyframes[index - 1];
+            }
+            if (index+1 < transform_edit.Keyframes.Count)
+            {
+                plus_sel_keyframe = transform_edit.Keyframes[index + 1];
+            }
+        }
+    }
+
+    void Update_Selected_Position(PointerEventArgs e)
+    {
+        double[] data_values = Point_Screen_To_Value([e.OffsetX, e.OffsetY]);
+        if (selected_keyframe != null)
+        {
+            selected_keyframe.Input = Math.Round(data_values[0], transform_edit.X_Precision);
+            selected_keyframe.Output = Math.Round(data_values[1], transform_edit.Y_Precision);
+
+            if (minus_sel_keyframe != null)
+            {
+                if (selected_keyframe.Input < minus_sel_keyframe.Input)
+                {
+                    transform_edit.Keyframes.Remove(selected_keyframe);
+                    transform_edit.Keyframes.Insert(transform_edit.Keyframes.IndexOf(minus_sel_keyframe), selected_keyframe);
+                    Select_Neighbours();
+                }
+            }
+
+            if (plus_sel_keyframe != null)
+            {
+                if (selected_keyframe.Input > plus_sel_keyframe.Input)
+                {
+                    transform_edit.Keyframes.Remove(selected_keyframe);
+                    transform_edit.Keyframes.Insert(transform_edit.Keyframes.IndexOf(plus_sel_keyframe)+1, selected_keyframe);
+                    Select_Neighbours();
+                }
+            }
+
+            Create_Graph();
+        }
+        else if (Closest_Keyfame(data_values) is Keyframe kf)
+        {
+            hover_keyframe = kf;
+        }
+        else
+        {
+            hover_keyframe = null;
+        }
+    }
+
+    void Deselect_Position(PointerEventArgs e, bool leave)
+    {
+        if (selected_keyframe != null)
+        {
+            selected_keyframe.Input = Math.Round(selected_keyframe.Input, transform_edit.X_Precision);
+            selected_keyframe.Output = Math.Round(selected_keyframe.Output, transform_edit.Y_Precision);
+
+            bool both = false;
+            if (minus_sel_keyframe != null)
+            {
+                if (selected_keyframe.Input == minus_sel_keyframe.Input)
+                {
+                    selected_keyframe.Input += 1;
+                    both = true;
+                }
+            }
+            if (plus_sel_keyframe != null)
+            {
+                if (selected_keyframe.Input == plus_sel_keyframe.Input)
+                {
+                    if (both)
+                    {
+                        plus_sel_keyframe.Input += 1;
+                    }
+                    else
+                    {
+                        selected_keyframe.Input -= 1;
+                    }
+                }
+            }
+
+            //*
+            for (int i = 0; i < transform_edit.Keyframes.Count-1; i++)
+            { 
+                if (transform_edit.Keyframes[i].Input==transform_edit.Keyframes[i+1].Input)
+                {
+                    transform_edit.Keyframes[i + 1].Input += 1;
+                }
+            } //*/
+        }
+
+        minus_sel_keyframe = null;
+        selected_keyframe = null;
+        plus_sel_keyframe = null;
+        if (leave)
+        {
+            hover_keyframe = null;
+        }
+
+        Create_Graph();
+    }
+
+
+    int graph_width = 70*8;
+
+    string svg_display = "";
+
+    double min_view;
+    double max_view = 100;
+
+    double screen_start_x;
+    double screen_width;
+
+    double screen_start_y;
+    double screen_height;
+
+    double[] Point_Screen_To_Value(double[] point)
+    {
+        if (point.Length != 2)
+        {
+            return [0,0];
+        }
+
+        double[] new_point = new double[2];
+        new_point[0] = Screen_To_Value(point[0], min_view, max_view, screen_start_x, screen_width);
+        new_point[1] = Screen_To_Value(point[1], transform_edit.Max_Y, transform_edit.Min_Y, screen_start_y, screen_height);
+
+        return new_point;
+    }
+
+    static double Screen_To_Value(double coord, double value_min, double value_max, double screen_start, double screen_length)
+    {
+        //DynamicShockPlugin.Logger?.LogInformation(coord.ToString() + ", " + value_min.ToString() + ", " + value_max.ToString() + ", " + screen_start.ToString() + ", " + screen_length.ToString());
+        if (coord < screen_start)
+        {
+            return value_min;
+        }
+        if (coord > screen_length + screen_start)
+        {
+            return value_max;
+        }
+
+        return (((coord - screen_start) / screen_length) * (value_max - value_min)) + value_min;
+    }
+
+    //TODO Fix Changing Y min and Max bug
+
+    private double[][] Clamp_Data(double[][] data)
+    {
+        List<double[]> inter_data = [];
+
+        if (data[0][0] > max_view)
+        {
+            inter_data.Add([max_view, data[0][1]]);
+        }
+        else if (data[^1][0] < min_view)
+        {
+            inter_data.Add([min_view, data[^1][1]]);
+        }
+        else
+        {
+            foreach (double[] value in data)
+            {
+                if (value.Length == 2)
+                {
+                    if (value[0]>= min_view && value[0]<=max_view)
+                    {
+                        inter_data.Add([value[0], Math.Max(transform_edit.Clamp_Min, Math.Min(transform_edit.Clamp_Max, value[1]))]);
+                    }
+                }
+            }
+        }
+
+        if (inter_data[^1][0] != transform_edit.Max_X)
+        {
+            inter_data.Add([Math.Min(transform_edit.Max_X, max_view), inter_data[^1][1]]);
+        }
+        if (inter_data[0][0] != transform_edit.Min_X)
+        {
+            inter_data.Insert(0, [Math.Max(transform_edit.Min_X, min_view), inter_data[0][1]]);
+        }
+
+        return [.. inter_data];
+    }
+
+    static Brush plot_colour = Colour.FromCSSString("#E9ECEF") ?? Colours.White;
+    static Brush line_colour = Colour.FromCSSString("#4A9EFF") ?? Colours.CornflowerBlue;
+
+    static PlotElementPresentationAttributes axes_attributes = new()
+    {
+        Stroke = plot_colour,
+        Fill = plot_colour,
+        LineWidth = 1,
+    };
+
+    static PlotElementPresentationAttributes label_attributes = new()
+    {
+        Stroke = plot_colour,
+        Fill = plot_colour,
+        LineWidth = 0.25
+    };
+
+    static PlotElementPresentationAttributes title_attributes = new()
+    {
+        Stroke = plot_colour,
+        Fill = plot_colour,
+        LineWidth = 0.0625
+    };
+
+    private void Create_Graph()
+    {
+        try
+        {
+            MemoryStream svg_hold = new();
+            LinearCoordinateSystem2D coords = new(min_view, max_view, transform_edit.Min_Y, transform_edit.Max_Y, 350, 250);
+
+            ContinuousAxis xAxis = new(new double[] { min_view, transform_edit.Min_Y }, new double[] { max_view, transform_edit.Min_Y }, coords)
+            {
+                PresentationAttributes = axes_attributes,
+                ArrowSize = 0,
+                Tag = "X-Axis"
+            };
+            ContinuousAxisLabels xLabels = new(new double[] { min_view, transform_edit.Min_Y }, new double[] { max_view, transform_edit.Min_Y }, coords)
+            {
+                Rotation = 0,
+                Alignment = TextAnchors.Center,
+                Baseline = TextBaselines.Top,
+                Position = _ => 10,
+                PresentationAttributes = label_attributes,
+                IntervalCount = 10,
+            };
+
+
+            ContinuousAxis yAxis = new(new double[] { min_view, transform_edit.Min_Y }, new double[] { min_view, transform_edit.Max_Y }, coords)
+            {
+                PresentationAttributes = axes_attributes,
+                ArrowSize = 0,
+                Tag = "Y-Axis"
+            };
+            ContinuousAxisLabels yLabels = new(new double[] { min_view, transform_edit.Min_Y }, new double[] { min_view, transform_edit.Max_Y }, coords)
+            {
+                Rotation = 0,
+                Alignment = TextAnchors.Right,
+                Baseline = TextBaselines.Middle,
+                Position = _ => -10,
+                PresentationAttributes = label_attributes,
+                IntervalCount = 10,
+
+            };
+
+
+
+
+            double[][] limits = new double[][]
+            {
+                    [min_view, transform_edit.Max_Y],
+                    [max_view, transform_edit.Min_Y],
+            };
+
+            ScatterPoints<IReadOnlyList<double>> limit_points = new(limits, coords)
+            {
+                Tag = "Limit_points",
+                Size=1,
+                PresentationAttributes = new()
+                {
+                    Stroke = null,
+                    Fill = plot_colour
+                }
+            };
+
+            Plot plot = new Plot();
+            plot.AddPlotElements(limit_points, xLabels, xAxis, yLabels, yAxis);
+
+
+            if (transform_edit.Label_X != "")
+            {
+                ContinuousAxisTitle xTitle = new(transform_edit.Label_X, new double[] { min_view, transform_edit.Min_Y }, new double[] { max_view, transform_edit.Min_Y }, coords)
+                {
+                    Rotation = Math.PI / 2,
+                    Alignment = TextAnchors.Center,
+                    Baseline = TextBaselines.Top,
+                    Position = 25,
+                    PresentationAttributes = title_attributes
+                };
+
+                plot.AddPlotElement(xTitle);
+            }
+            if (transform_edit.Label_Y != "")
+            {
+                ContinuousAxisTitle yTitle = new(transform_edit.Label_Y, new double[] { min_view, transform_edit.Min_Y }, new double[] { min_view, transform_edit.Max_Y }, coords)
+                {
+                    Rotation = 0,
+                    Alignment = TextAnchors.Center,
+                    Baseline = TextBaselines.Middle,
+                    Position = -36,
+                    PresentationAttributes = title_attributes
+                };
+                plot.AddPlotElement(yTitle);
+            }
+            if (transform_edit.T_Name != "")
+            {
+                TextLabel<IReadOnlyList<double>> titleLabel = new(
+                    transform_edit.T_Name, 
+                    coords.ToDataCoordinates((coords.ToPlotCoordinates([min_view, transform_edit.Max_Y]) + coords.ToPlotCoordinates([max_view, transform_edit.Max_Y])) * 0.5 + new Point(0, -10)), 
+                    coords) 
+                    { 
+                        Baseline = TextBaselines.Bottom, 
+                        PresentationAttributes = title_attributes
+                    };
+
+                plot.AddPlotElement(titleLabel);
+            }
+
+
+            List<double[]> keyframe_inter_data = [];
+
+            for (int i = 0; i < transform_edit.Keyframes.Count; i++)
+            {
+                keyframe_inter_data.Add([transform_edit.Keyframes[i].Input, transform_edit.Keyframes[i].Output]);
+
+                if (i + 1 < transform_edit.Keyframes.Count)
+                {
+                    keyframe_inter_data.AddRange(transform_edit.Keyframes[i].Interpolate_Data(transform_edit.Keyframes[i + 1], Math.Max(max_view-min_view,1)/500));
+                }
+            }
+
+            DataLine<IReadOnlyList<double>> functionLine = new(Clamp_Data([.. keyframe_inter_data]), coords)
+            {
+                Smooth = false,
+                PresentationAttributes = new()
+                {
+                    Stroke = line_colour 
+                }
+            };
+
+            plot.AddPlotElement(functionLine);
+
+
+            List<double[]> point_data = [];
+
+            foreach (Keyframe keyframe in transform_edit.Keyframes)
+            {
+                if (keyframe.Input >= min_view && keyframe.Input<= max_view)
+                {
+                    point_data.Add([keyframe.Input, keyframe.Output]);
+                }   
+            }
+
+            if (point_data.Count > 0)
+            {
+                ScatterPoints<IReadOnlyList<double>> keyframe_points = new(point_data, coords)
+                {
+                    Tag = "Key_points",
+                    Size = 5,
+                    PresentationAttributes = new()
+                    {
+                        Stroke = null,
+                        Fill = Colours.IndianRed
+                    }
+                };
+
+                plot.AddPlotElement(keyframe_points);
+            }
+
+
+
+
+
+            Page page = plot.Render();
+            page.SaveAsSVG(svg_hold);
+            //page.SaveAsSVG("function.svg");
+
+            svg_hold.Seek(0, SeekOrigin.Begin);
+
+            string l = Encoding.UTF8.GetString(svg_hold.ToArray());
+
+            //height=\"{graph_height}px\"
+
+            l = l.Replace("<svg", $"<svg width=\"{graph_width}px\" style=\"background-color:#1F2937\"");
+
+            string[] lines = l.Split("\n");
+
+            double[] viewbox_size = Get_ViewBox_Size(lines[1]);
+            double[] first_constraint = Get_Point_Coords(lines[18], "Limit_points");
+            double[] second_constraint = Get_Point_Coords(lines[19], "Limit_points");
+
+            double scale_factor = graph_width / viewbox_size[0];
+
+            screen_start_x = first_constraint[0] * scale_factor;
+            screen_width = (second_constraint[0] - first_constraint[0]) * scale_factor;
+
+            screen_start_y = first_constraint[1] * scale_factor;
+            screen_height = (second_constraint[1] - first_constraint[1]) * scale_factor;
+
+
+
+            svg_display = l;
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+
+        }
+    }
+
+    static double[] Get_Point_Coords(string line, string point_name)
+    {
+        string[] numbers = line.Split("transform=\"matrix(1,0,0,1,")[1].Split(")\" id=\""+point_name)[0].Split(",");
+
+        double[] coords = new double[2];
+
+        try
+        {
+            coords[0] = Convert.ToDouble(numbers[0]);
+            coords[1] = Convert.ToDouble(numbers[1]);
+        }
+        catch {}
+
+        return coords;
+    }
+
+    static double[] Get_ViewBox_Size(string line)
+    {
+        string[] numbers = line.Split("viewBox=\"0 0 ")[1].Split("\" version=\"")[0].Split(" ");
+
+        double[] coords = new double[2];
+
+        try
+        {
+            coords[0] = Convert.ToDouble(numbers[0]);
+            coords[1] = Convert.ToDouble(numbers[1]);
+        }
+        catch { }
+
+        return coords;
+    }
+}

@@ -1,0 +1,88 @@
+﻿@namespace DynamicShock.Components.Selector_D
+@using DynamicShock.Models;
+@using System.Text
+@using MultiShock.PluginSdk.Components
+
+<SelectorD Combo="@Combo" Multi_Select="@Multi_Select" Label="@Label"
+           Selected_List="@Value_List" Selected_List_Changed="@((e) => Value_List = [.. e])"
+           Value="@Value_Name" Value_Changed="@((e) => Value_Name = e)"
+           Value_Tree="Config_Values.Event_Tree" Get_Name="Get_Name" Selectable_Folder="true" Close_On_Select="@(!(Multi_Select))" />
+
+@code {
+    [Parameter]
+    public bool Combo { get; set; } = true;
+
+    [Parameter]
+    public bool Multi_Select { get; set; } = false;
+
+    [Parameter]
+    public string Label { get; set; } = "";
+
+    private List<string> _value_List = [];
+    private List<string> Value_List
+    {
+        get => _value_List;
+        set
+        {
+            if (_value_List.Count != value.Count)
+            {
+                _value_List = [.. value];
+                Selected_List = [.. _value_List];
+                Selected_ListChanged.InvokeAsync(Selected_List);
+            }
+        }
+    }
+
+    [Parameter]
+    public List<string> Selected_List { get; set; } = [];
+    [Parameter]
+    public EventCallback<List<string>> Selected_ListChanged { get; set; }
+
+
+    private string _value_Name = "";
+    private string Value_Name
+    {
+        get => _value_Name;
+        set
+        {
+            if (_value_Name != value)
+            {
+                _value_Name = value;
+                Value = _value_Name;
+                ValueChanged.InvokeAsync(Value);
+            }
+        }
+    }
+
+    [Parameter]
+    public string Value { get; set; } = "";
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        _value_Name = Value;
+        _value_List = [.. Selected_List];
+        base.OnParametersSet();
+    }
+
+
+    string Get_Name(string key)
+    {
+        bool endpoint = !key.EndsWith('/');
+        string[] parts = key.Split("/");
+
+        if (endpoint)
+        {
+            return parts[^1];
+        }
+        else if (parts.Length >= 2)
+        {
+            return parts[^2] + "/";
+        }
+        else
+        {
+            return key;
+        }
+    }
+}
