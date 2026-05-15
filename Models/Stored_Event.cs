@@ -168,7 +168,10 @@ namespace DynamicShock.Models
                             outputs.Remove(s.Key);
                         }
                         ports.Remove(Event_Value_Types.failure.ToString()+"_port");
-                        ports.Insert(0, "done");
+                        if (!ports.Contains("done"))
+                        {
+                            ports.Insert(0, "done");
+                        }
                     }
                 }
 

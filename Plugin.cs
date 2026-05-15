@@ -6,22 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MultiShock.PluginSdk;
 using MultiShock.PluginSdk.Flow;
-using System.Text.Json;
-using System.Xml.Linq;
 
 namespace DynamicShock;
-
-/// <summary>
-/// Just an example plugin
-/// </summary>
-/// 
-
-/*
- 
-
-
- */
-
 
 public class DynamicShockPlugin : ReloadablePluginBase, IPlugin, IConfigurablePlugin, IPluginRouteProvider, IPluginWithStyles, IFlowNodeProvider
 {

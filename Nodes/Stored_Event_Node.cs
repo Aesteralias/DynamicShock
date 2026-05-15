@@ -59,6 +59,7 @@ namespace DynamicShock.Nodes
 
                     if (outputs.TryGetValue("ports",out object? ports_obj) && ports_obj is List<string> ports)
                     {
+                        outputs.Remove("ports");
                         return new()
                         {
                             Outputs = outputs,
