@@ -46,7 +46,8 @@ namespace DynamicShock.Nodes
 
                 if (eds.Register_Events is Stored_Event[] sea)
                 {
-                    DynamicShockPlugin.Log_Info("Registering Events");
+                    if (Config_Values.Websocket_Logging)
+                        DynamicShockPlugin.Log_Info("Registering Events");
                     bool registered = false;
                     foreach (Stored_Event se in sea)
                     {
@@ -77,8 +78,8 @@ namespace DynamicShock.Nodes
             catch {}
             
 
-
-            DynamicShockPlugin.Log_Info("Invalid Event Message");
+            if (Config_Values.Websocket_Logging)
+                DynamicShockPlugin.Log_Info("Invalid Event Message");
 
             return "Failed Command";
         }

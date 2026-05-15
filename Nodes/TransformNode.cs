@@ -46,7 +46,6 @@ namespace DynamicShock.Nodes
                         Value = JsonSerializer.Serialize(t, jso)
                     });
                 }
-                //DynamicShockPlugin.Logger?.LogInformation(JsonSerializer.Serialize(g, jso));
             }
 
             Dictionary<string, FlowProperty> store = new() 

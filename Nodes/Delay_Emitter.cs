@@ -185,7 +185,6 @@ namespace DynamicShock.Nodes
 
             if (signal is not null)
             {
-                //DynamicShockPlugin.Log_Info("Sending Delay");
                 Signal_Reciever_Trigger.Delayed_Signal(delay, signal, outputs, null, ctoken);
             }
 

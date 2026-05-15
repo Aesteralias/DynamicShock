@@ -136,10 +136,6 @@
     private string Get_Event_Name(string key)
     {
         bool endpoint = !key.EndsWith('/');
-
-
-
-        //DynamicShockPlugin.Log_Info(key);
         string[] parts = key.Split("/");
 
         if (endpoint)

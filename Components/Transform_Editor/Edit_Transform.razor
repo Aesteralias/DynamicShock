@@ -622,7 +622,6 @@
 
     static double Screen_To_Value(double coord, double value_min, double value_max, double screen_start, double screen_length)
     {
-        //DynamicShockPlugin.Logger?.LogInformation(coord.ToString() + ", " + value_min.ToString() + ", " + value_max.ToString() + ", " + screen_start.ToString() + ", " + screen_length.ToString());
         if (coord < screen_start)
         {
             return value_min;

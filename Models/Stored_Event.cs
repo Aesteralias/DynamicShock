@@ -226,7 +226,6 @@ namespace DynamicShock.Models
                 other.Group != Group ||
                 other.Description != Description)
             {
-                //DynamicShockPlugin.Log_Info("Details Difference");
                 return false;
             }
                 
@@ -237,13 +236,11 @@ namespace DynamicShock.Models
                 other.Max_X != Max_X ||
                 other.X_Precision != X_Precision)
             {
-                //DynamicShockPlugin.Log_Info("X-Axis Differnece");
                 return false;
             }
 
             if (other.Values.Count != Values.Count)
             {
-                //DynamicShockPlugin.Log_Info("Value Count Difference");
                 return false;
             }
 
@@ -253,20 +250,17 @@ namespace DynamicShock.Models
                 {
                     if (!ev.IsSame(item.Value))
                     {
-                        //DynamicShockPlugin.Log_Info("Value Difference Difference");
                         return false;
                     }
                 }
                 else
                 {
-                    //DynamicShockPlugin.Log_Info("Value Missing");
                     return false;
                 }
             }
 
             if (other.Ids.Count != Ids.Count)
             {
-                //DynamicShockPlugin.Log_Info("Id Count Difference");
                 return false;
             }
 
@@ -274,7 +268,6 @@ namespace DynamicShock.Models
             {
                 if (other.Ids[i] != Ids[i])
                 {
-                    //DynamicShockPlugin.Log_Info("Id Difference");
                     return false;
                 }
             }
@@ -282,7 +275,6 @@ namespace DynamicShock.Models
             if (other.Selection != Selection ||
                 other.Command != Command)
             {
-                //DynamicShockPlugin.Log_Info("Enum Difference");
                 return false;
             }
 

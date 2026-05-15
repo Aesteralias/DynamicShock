@@ -33,7 +33,6 @@ public abstract class EventNodeBase : IFlowTriggerNode
         // Get the trigger manager from DI
         if (services.GetService(typeof(DynamicShockTriggerManager)) is DynamicShockTriggerManager triggerManager)
         {
-            //DynamicShockPlugin.Log_Info("Registering Node: " + TypeId);
             triggerManager.Register(TypeId, instance, FireTriggerAsync);
         }
         return Task.CompletedTask;
