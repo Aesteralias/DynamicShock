@@ -10,6 +10,9 @@ Plugin for MultiShock that adds WebSocket Endpoints, Callable Shock Configs, Int
 - ws://localhost:4569/Raw
   - Activate shock with Raw Data
   - TODO: Compatiblity with old MultiShock websocket
+ 
+WebSockets don't activate anything by themselves they need a Flow setup in order to do anything.
+There should be an Event WebSocket flow in Browse Flows in MultiShock
 
 
 ## Nodes

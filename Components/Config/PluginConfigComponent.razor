@@ -21,19 +21,23 @@
     <div><strong>WebSocket Config</strong></div>
     <div class="text-xs text-gray-400 space-y-4">
         <Card Title="Websocket Settings">
-            <Toggle Label="Enable WebSocket?" @bind-Value="Config_Values.Websocket_Enabled"></Toggle>
-            <Toggle Label="WebSocket Logging" @bind-Value="Config_Values.Websocket_Logging"></Toggle>
-            <Toggle Label="Default Enable Events Through WebSocket?" @bind-Value="Config_Values.Default_Enabled"></Toggle>
+             <div class="text-xs text-gray-400 space-y-4">
+                <Toggle Label="Enable WebSocket?" @bind-Value="Config_Values.Websocket_Enabled"></Toggle>
+                <Toggle Label="WebSocket Logging" @bind-Value="Config_Values.Websocket_Logging"></Toggle>
+                <Toggle Label="Default Enable Events Through WebSocket?" @bind-Value="Config_Values.Default_Enabled"></Toggle>
+            </div>
         </Card>
         
         <Card Title="Event Settings">
-            <ShockerSelect Label="Default Shockers"
-                           Description="What devices/shockers should be used when none are provided."
-                           MultiSelect="true"
-                           GroupByDevice="true"
-                           @bind-SelectedIds="Config_Values.Default_Shockers">
-            </ShockerSelect>
-            <Slider Min="0" Max="100" Label="Global Event Max Intensity" Filled="true" ShowValue="true" @bind-Value="Config_Values.Global_Max_Intensity" Step="1"></Slider>
+             <div class="text-xs text-gray-400 space-y-4">
+                <ShockerSelect Label="Default Shockers"
+                               Description="What devices/shockers should be used when none are provided."
+                               MultiSelect="true"
+                               GroupByDevice="true"
+                               @bind-SelectedIds="Config_Values.Default_Shockers">
+                </ShockerSelect>
+                <Slider Min="0" Max="100" Label="Global Event Max Intensity" Filled="true" ShowValue="true" @bind-Value="Config_Values.Global_Max_Intensity" Step="1"></Slider>
+            </div>
         </Card>
 
         <Card Title="Node Settings">
