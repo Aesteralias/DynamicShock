@@ -53,7 +53,10 @@ namespace DynamicShock.Nodes
                     {
                         if (Config_Values.Get_Event(se.Get_Name()) is null)
                         {
-                            se.Registered_Event = Config_Values.Default_Enabled;
+                            if (!Config_Values.Default_Enabled)
+                            {
+                                se.Registered_Event = false;
+                            }
                             Config_Values.Save_Event(se, "");
                             registered = true;
                         }

@@ -10,7 +10,7 @@ namespace DynamicShock.Models
     internal class Config_Value_Values
     {
         public bool Websocket_Enabled = true;
-        public bool Default_Enabled = false;
+        public bool Default_Enabled = true;
         public bool Websocket_Logging = false;
 
         public List<string> Default_Shockers = [];
